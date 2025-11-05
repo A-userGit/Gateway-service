@@ -13,3 +13,9 @@ IF %ERRORLEVEL% NEQ 0 ECHO %newline%127.0.0.1 order-service>>%WINDIR%\System32\d
 
 FIND /C /I "gateway-service" %WINDIR%\system32\drivers\etc\hosts
 IF %ERRORLEVEL% NEQ 0 ECHO %newline%127.0.0.1 gateway-service>>%WINDIR%\System32\drivers\etc\hosts
+
+FIND /C /I "payment-service" %WINDIR%\system32\drivers\etc\hosts
+IF %ERRORLEVEL% NEQ 0 ECHO %newline%127.0.0.1 payment-service>>%WINDIR%\System32\drivers\etc\hosts
+
+FIND /C /I "kafka" %WINDIR%\system32\drivers\etc\hosts
+IF %ERRORLEVEL% NEQ 0 ECHO %newline%127.0.0.1 kafka>>%WINDIR%\System32\drivers\etc\hosts

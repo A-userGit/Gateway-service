@@ -13,24 +13,23 @@ import com.innowise.gatewayservice.util.ExternalServiceCaller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
 public class AccessServiceImpl implements AccessService {
 
-  private final WebClient webClient = WebClient.create();
   private final RegistrationProperties registrationProperties;
+  private final ExternalServiceCaller caller;
 
   @Override
   public Mono<AccessDataDto> signup(UserDataDto userData) {
     Mono<AuthResponseDto> authResponseMono = registerOnAuthServer(userData);
     return authResponseMono.flatMap((authResponse) -> {
       if (authResponse != null) {
-        return registerOnUserService(userData, authResponse.userId())
-            .map(userResponse -> new AccessDataDto(userResponse.id()))
-            .doOnError(e -> rollBackUserRegistration(authResponse.tempAbortCode()));
+        return registerOnUserService(userData, authResponse.getUserId())
+            .map(userResponse -> new AccessDataDto(userResponse.getId()))
+            .doOnError(e -> rollBackUserRegistration(authResponse.getTempAbortCode()));
       } else {
         return Mono.error(ClientCallException.clientFail(HttpStatusCode.valueOf(500)));
       }
@@ -39,9 +38,6 @@ public class AccessServiceImpl implements AccessService {
 
   @Override
   public void rollBackUserRegistration(String tempDeletionCode) {
-    ExternalServiceCaller<AuthResponseDto, String> caller = new ExternalServiceCaller<>(
-        registrationProperties.getBackoffDelay(), registrationProperties.getMaxAttempts(),
-        webClient, AuthResponseDto.class);
     caller.sendDeleteWithRetry(registrationProperties.getParam().getAuthServerDelete(),
         tempDeletionCode,
         registrationProperties.getUri().getAuthServerDelete()).subscribe();
@@ -51,11 +47,8 @@ public class AccessServiceImpl implements AccessService {
   public Mono<AuthResponseDto> registerOnAuthServer(UserDataDto userData) {
     UserCredentialsDto credentialsDto = new UserCredentialsDto(userData.email(),
         userData.password());
-    ExternalServiceCaller<AuthResponseDto, UserCredentialsDto> caller = new ExternalServiceCaller<>(
-        registrationProperties.getBackoffDelay(), registrationProperties.getMaxAttempts(),
-        webClient, AuthResponseDto.class);
     return caller.sendPostWithRetry(credentialsDto,
-        registrationProperties.getUri().getAuthServerCreate());
+            registrationProperties.getUri().getAuthServerCreate(), AuthResponseDto.class);
   }
 
   @Override
@@ -63,10 +56,7 @@ public class AccessServiceImpl implements AccessService {
     CreateUserDto createUserDto = new CreateUserDto(userData.name(), userData.surname(), externalId,
         userData.birthDate(),
         userData.email());
-    ExternalServiceCaller<UserDto, CreateUserDto> caller = new ExternalServiceCaller<>(
-        registrationProperties.getBackoffDelay(), registrationProperties.getMaxAttempts(),
-        webClient, UserDto.class);
     return caller.sendPostWithRetry(createUserDto,
-        registrationProperties.getUri().getUserServiceCreate());
+        registrationProperties.getUri().getUserServiceCreate(), UserDto.class);
   }
 }

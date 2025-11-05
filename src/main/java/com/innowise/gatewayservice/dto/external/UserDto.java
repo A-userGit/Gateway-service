@@ -1,5 +1,21 @@
 package com.innowise.gatewayservice.dto.external;
 
-public record UserDto(long id, String name, String surname, String birthDate, String email) {
+import java.util.Objects;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+public final class UserDto {
+
+  private long id;
+  private String name;
+  private String surname;
+  private String birthDate;
+  private String email;
 
 }
