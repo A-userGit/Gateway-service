@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: 'postgres:latest'
+    image: 'postgres:17'
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
@@ -15,6 +15,33 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./startup/startup-scripts:/docker-entrypoint-initdb.d
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    command: mongod --bind_ip 0.0.0.0
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data:/data/db
+      - ./startup/startup-scripts:/docker-entrypoint-initdb.d
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: admin
+    restart: unless-stopped
+    healthcheck:
+      test: >
+        echo 'db.runCommand({serverStatus:1}).ok' | 
+        mongosh admin 
+        -u 'root' 
+        -p 'root' 
+        --quiet | grep 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   redis:
     image: 'redis:latest'
     container_name: redis_container
@@ -98,6 +125,98 @@ services:
       - postgres
       - auth-service
 
+  kafka-1:
+    image: redpandadata/redpanda:v25.1.11
+    ports:
+      - "9092:9092"
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://kafka-1:29092,OUTSIDE://kafka:9092
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr kafka-1:33145
+      - --seeds kafka-1:33145,kafka-2:33145
+    environment:
+      - REDPANDA_AUTO_CREATE_TOPICS_ENABLED=true
+    volumes:
+      - redpanda-data-1:/var/lib/redpanda/data
+    networks:
+      - messaging_app__kafka
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9644/v1/status/ready" ]
+      interval: 2s
+      timeout: 1s
+      retries: 60
+
+  kafka-2:
+    image: redpandadata/redpanda:v25.1.11
+    ports:
+      - "9093:9092"
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --node-id 1
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://kafka-2:29092,OUTSIDE://kafka:9093
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr kafka-2:33145
+      - --seeds kafka-1:33145,kafka-2:33145
+    environment:
+      - REDPANDA_AUTO_CREATE_TOPICS_ENABLED=true
+    volumes:
+      - redpanda-data-2:/var/lib/redpanda/data
+    networks:
+      - messaging_app__kafka
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9644/v1/status/ready" ]
+      interval: 2s
+      timeout: 1s
+      retries: 60
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    ports:
+      - "8086:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:29092,kafka-2:29092
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    networks:
+      - messaging_app__kafka
+
+
+  kafka-init:
+    image: redpandadata/redpanda:v25.1.11
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    entrypoint: [ "rpk" ]
+    command: [
+      "topic", "create",
+      "--partitions", "1",
+      "--replicas", "1",
+      "--brokers", "kafka:9092",
+      "payment.result.msg",
+      "order.created.msg"
+    ]
+    networks:
+      - messaging_app__kafka
+
   order-service:
     container_name: order-service
     build:
@@ -109,6 +228,10 @@ services:
       postgres:
         condition: service_healthy
       auth-service:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
         condition: service_healthy
       user-service:
         condition: service_healthy
@@ -122,9 +245,47 @@ services:
       - postgres
       - auth-service
       - user-service
+      - kafka-1
+      - kafka-2
+
+  payment-service:
+    container_name: payment-service
+    build:
+      context: ./../PaymentService
+      dockerfile: Dockerfile
+    image: payment-service
+    restart: always
+    depends_on:
+      mongo:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8085/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - mongo
+      - auth-service
+      - kafka-1
+      - kafka-2
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
+  mongodb_data:
+    driver: local
+  redpanda-data-1:
+  redpanda-data-2:
+
+networks:
+  messaging_app__kafka:
+    driver: bridge

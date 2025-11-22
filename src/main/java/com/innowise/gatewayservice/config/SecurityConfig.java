@@ -6,6 +6,7 @@ import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity.CsrfSpec;
@@ -23,31 +24,19 @@ public class SecurityConfig {
 
   private final SecurityProperties properties;
 
-  private static final String[] AUTH_WHITE_LIST = {
-      "/actuator/health/**",
-      "/swagger-resources/**",
-      "/swagger-ui/**",
-      "/swagger-ui.html",
-      "/v3/api-docs/**",
-      "/v3/api-docs",
-      "/webjars/**",
-      "/favicon.ico",
-      "/oauth2/**",
-      "/login**",
-      "/auth-server/**",
-      "/api/v1/access/**"
-  };
+  private static final String[] AUTH_WHITE_LIST = {"/actuator/health/**", "/swagger-resources/**",
+      "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs", "/webjars/**",
+      "/favicon.ico", "/oauth2/**", "/login**", "/auth-server/**", "/api/v1/access/**", "/error"};
 
   @Bean
   public SecurityWebFilterChain filterChain(ServerHttpSecurity http) throws Exception {
-    http
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .authorizeExchange(exchanges -> exchanges
-            .pathMatchers(AUTH_WHITE_LIST).permitAll()
-            .anyExchange().authenticated()
-        )
-        .oauth2Login(withDefaults())
-        .csrf(CsrfSpec::disable);
+    http.csrf(CsrfSpec::disable).cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .authorizeExchange(
+            exchanges -> exchanges.pathMatchers(AUTH_WHITE_LIST).permitAll().anyExchange()
+                .authenticated())
+        .oauth2ResourceServer((oauth2) -> oauth2
+            .jwt(Customizer.withDefaults()))
+        .oauth2Login(withDefaults());
     return http.build();
   }
 

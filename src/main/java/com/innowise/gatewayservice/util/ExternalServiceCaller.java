@@ -11,14 +11,13 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 @RequiredArgsConstructor
-public class ExternalServiceCaller<T, K> {
+public class ExternalServiceCaller {
 
   private final int backoff;
   private final int maxRetry;
   private final WebClient webClient;
-  private final Class<T> clazz;
 
-  public Mono<T> sendPostWithRetry(K requiredInfo, String externalUri) {
+  public <T,V> Mono<T> sendPostWithRetry(V requiredInfo, String externalUri, Class<T> returnType) {
     return webClient.post().uri(externalUri).bodyValue(requiredInfo).retrieve()
         .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> Mono.error(
             ClientCallException.clientFail(clientResponse.statusCode())))
@@ -26,7 +25,7 @@ public class ExternalServiceCaller<T, K> {
             ExternalServiceCallException.callFail(clientResponse.statusCode(), externalUri)))
         .onStatus(HttpStatusCode::is3xxRedirection, clientResponse -> Mono.error(
             ExternalServiceCallException.callFail(clientResponse.statusCode(), externalUri)))
-        .bodyToMono(clazz).retryWhen(Retry.backoff(maxRetry, Duration.ofSeconds(backoff))
+        .bodyToMono(returnType).retryWhen(Retry.backoff(maxRetry, Duration.ofSeconds(backoff))
             .filter(throwable -> throwable instanceof ExternalServiceCallException)
             .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
               ExternalServiceCallException failure = (ExternalServiceCallException) retrySignal.failure();
@@ -34,7 +33,7 @@ public class ExternalServiceCaller<T, K> {
             }));
   }
 
-  public Mono<ResponseEntity<Void>> sendDeleteWithRetry(String idParamName, K idParamValue,
+  public <V> Mono<ResponseEntity<Void>> sendDeleteWithRetry(String idParamName, V idParamValue,
       String externalUri) {
     String fullUri = String.format("%s?%s=%s", externalUri, idParamName, idParamValue);
     return webClient.delete().uri(fullUri).retrieve().onStatus(HttpStatusCode::is4xxClientError,

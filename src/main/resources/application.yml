@@ -33,6 +33,11 @@ spring:
             predicates[0]: Path=/auth-server/**
             filters[0]: RewritePath=/auth-server/(?<remaining>.*), /$\{remaining}
             filters[1]: TokenRelay=
+          routes[4]:
+            id: payment-service
+            uri: http://payment-service:8085
+            predicates[0]: Path=/api/v1/payments/**
+            filters[0]: TokenRelay=
 
   security:
     oauth2:
@@ -78,3 +83,9 @@ springdoc:
     tokenUrl: http://auth-service:8082/oauth2/token
     scopes: openid
 swagger-server: http://gateway-service:8084/
+logging:
+  level:
+    org:
+      springframework:
+        security: TRACE
+        cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
