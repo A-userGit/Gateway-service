@@ -56,6 +56,75 @@ services:
       retries: 5
     restart: unless-stopped
 
+  gateway-service:
+    container_name: gateway-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gateway-service
+    restart: always
+    environment:
+      CLIENT_ID: "gateway-client"
+      CLIENT_SECRET: "KLJIHUGJKKLIJHGHGGF"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    ports:
+      - 8084:8084
+    healthcheck:
+      test: "curl --fail --silent localhost:8084/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - auth-service
+
+  auth-service:
+    container_name: auth-service
+    build:
+      context: ./../AuthService
+      dockerfile: Dockerfile
+    image: auth-service
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - 8082:8082
+    healthcheck:
+      test: "curl --fail --silent localhost:8082/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - postgres
+
+  user-service:
+    container_name: user-service
+    build:
+      context: ./../UserService
+      dockerfile: Dockerfile
+    image: user-service
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8080/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - postgres
+      - auth-service
+
   kafka-1:
     image: redpandadata/redpanda:v25.1.11
     ports:
@@ -67,7 +136,7 @@ services:
       - --overprovisioned
       - --node-id 0
       - --check=false
-      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://kafka:9092
       - --advertise-kafka-addr PLAINTEXT://kafka-1:29092,OUTSIDE://kafka:9092
       - --rpc-addr 0.0.0.0:33145
       - --advertise-rpc-addr kafka-1:33145
@@ -95,7 +164,7 @@ services:
       - --overprovisioned
       - --node-id 1
       - --check=false
-      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://kafka:9092
       - --advertise-kafka-addr PLAINTEXT://kafka-2:29092,OUTSIDE://kafka:9093
       - --rpc-addr 0.0.0.0:33145
       - --advertise-rpc-addr kafka-2:33145
@@ -116,15 +185,18 @@ services:
     image: provectuslabs/kafka-ui:v0.7.2
     container_name: kafka-ui
     ports:
-      - "8080:8080"
+      - "8086:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:29092,kafka-2:29092
     depends_on:
-      - kafka-1
-      - kafka-2
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
     networks:
       - shop_app__kafka
+
 
   kafka-init:
     image: redpandadata/redpanda:v25.1.11
@@ -144,6 +216,66 @@ services:
     ]
     networks:
       - shop_app__kafka
+
+  order-service:
+    container_name: order-service
+    build:
+      context: ./../OrderService
+      dockerfile: Dockerfile
+    image: order-service
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8083/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - postgres
+      - auth-service
+      - user-service
+      - kafka-1
+      - kafka-2
+
+  payment-service:
+    container_name: payment-service
+    build:
+      context: ./../PaymentService
+      dockerfile: Dockerfile
+    image: payment-service
+    restart: always
+    depends_on:
+      mongo:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8085/actuator/health | grep UP || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    links:
+      - mongo
+      - auth-service
+      - kafka-1
+      - kafka-2
+
 volumes:
   postgres_data:
     driver: local

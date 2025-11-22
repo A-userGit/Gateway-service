@@ -83,3 +83,9 @@ springdoc:
     tokenUrl: http://auth-service:8082/oauth2/token
     scopes: openid
 swagger-server: http://gateway-service:8084/
+logging:
+  level:
+    org:
+      springframework:
+        security: TRACE
+        cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
