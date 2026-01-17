@@ -26,7 +26,7 @@ public class SecurityConfig {
 
   private static final String[] AUTH_WHITE_LIST = {"/actuator/health/**", "/swagger-resources/**",
       "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs", "/webjars/**",
-      "/favicon.ico", "/oauth2/**", "/login**", "/auth-server/**", "/api/v1/access/**", "/error"};
+      "/favicon.ico", "/oauth2/**", "/login**", "/auth-server/**", "/api/v1/access/**", "/error", "/otl/**"};
 
   @Bean
   public SecurityWebFilterChain filterChain(ServerHttpSecurity http) throws Exception {

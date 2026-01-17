@@ -18,6 +18,10 @@ spec:
           imagePullPolicy: Never
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 80
           env:
           - name: CLIENT_ID
             valueFrom:

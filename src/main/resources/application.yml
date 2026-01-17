@@ -84,8 +84,43 @@ springdoc:
     scopes: openid
 swagger-server: http://gateway-service/
 logging:
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
   level:
     org:
       springframework:
         security: TRACE
         cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
+
+
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://tempo.monitoring.svc.cluster.local:4318/v1/traces
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show:
+        details: "always"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+otel:
+  traces:
+    sampler: always_on
+  exporter:
+    otlp:
+      protocol: grpc
+      endpoint: http://otel-collector.monitoring.svc.cluster.local:4317

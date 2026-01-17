@@ -1,0 +1,31 @@
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        orgId: 1
+        url: http://loki-gateway.monitoring.svc.cluster.local
+        basicAuth: false
+        isDefault: true
+        version: 1
+        editable: true
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        isDefault: false
+        access: proxy
+        editable: true
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        url: http://tempo.monitoring.svc.cluster.local:3200
+        access: proxy
+        isDefault: false
+        version: 1
+grafana:
+  admin:
+    existingSecret: grafana-admin-credentials
+    userKey: admin
+    passwordKey: admin
