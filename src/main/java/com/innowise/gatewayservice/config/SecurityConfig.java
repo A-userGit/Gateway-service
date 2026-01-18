@@ -26,7 +26,7 @@ public class SecurityConfig {
 
   private static final String[] AUTH_WHITE_LIST = {"/actuator/health/**", "/swagger-resources/**",
       "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs", "/webjars/**",
-      "/favicon.ico", "/oauth2/**", "/login**", "/auth-server/**", "/api/v1/access/**", "/error"};
+      "/favicon.ico", "/oauth2/**", "/login**", "/auth-server/**", "/api/v1/access/**", "/error", "/otl/**"};
 
   @Bean
   public SecurityWebFilterChain filterChain(ServerHttpSecurity http) throws Exception {
@@ -56,7 +56,7 @@ public class SecurityConfig {
         Arrays.asList("GET", "POST", "OPTIONS", "PATCH", "HEAD", "PUT", "DELETE"));
     config.setAllowedOriginPatterns(
         Arrays.asList("http://localhost:8080*", "http://localhost:8082*", "null",
-            "http://auth-service:8082*", "http://gateway-service:8084*", "http://localhost:8084*",
+            "http://auth-service*", "http://gateway-service:8084*", "http://localhost:8084*",
             "http://user-service:8080*", "http://order-service:8083*", "http://localhost:8083*"));
     config.setAllowCredentials(true);
     source.registerCorsConfiguration("/**", config);

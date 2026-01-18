@@ -1,5 +1,5 @@
 server:
-  port: 8084
+  port: 80
   servlet:
     session:
       cookie:
@@ -7,35 +7,35 @@ server:
 spring:
   application:
     name: gateway-service
-    port: 8084
+    port: 80
   cloud:
     gateway:
       server:
         webflux:
           routes[0]:
             id: user-service
-            uri: http://user-service:8080
+            uri: http://user-service
             predicates[0]: Path=/api/v1/users/** ,/api/v1/cards/**
             filters[0]: TokenRelay=
           routes[1]:
             id: auth-service
-            uri: http://auth-service:8082
+            uri: http://auth-service
             predicates[0]: Path=/api/v1/authorization/**
             filters[0]: TokenRelay=
           routes[2]:
             id: order-service
-            uri: http://order-service:8083
+            uri: http://order-service
             predicates[0]: Path=/api/v1/orders/**, /api/v1/items/**, /api/v1/ordered-items/**
             filters[0]: TokenRelay=
           routes[3]:
             id: oauth
-            uri: http://auth-service:8082
+            uri: http://auth-service
             predicates[0]: Path=/auth-server/**
             filters[0]: RewritePath=/auth-server/(?<remaining>.*), /$\{remaining}
             filters[1]: TokenRelay=
           routes[4]:
             id: payment-service
-            uri: http://payment-service:8085
+            uri: http://payment-service
             predicates[0]: Path=/api/v1/payments/**
             filters[0]: TokenRelay=
 
@@ -52,19 +52,19 @@ spring:
             scope: openid
         provider:
           my-oidc-provider:
-            issuer-uri: http://auth-service:8082
-            authorization-uri: http://auth-service:8082/oauth2/authorize
-            token-uri: http://auth-service:8082/oauth2/token
-            redirect-uri: http://gateway-service:8084/login/oauth2/code/my-oidc-client
-            user-info-uri: http://gateway-service:8084/auth-server/oauth2/userinfo
+            issuer-uri: http://auth-service
+            authorization-uri: http://auth-service/oauth2/authorize
+            token-uri: http://auth-service/oauth2/token
+            redirect-uri: http://gateway-service/login/oauth2/code/my-oidc-client
+            user-info-uri: http://gateway-service/auth-server/oauth2/userinfo
             user-name-attribute: sub
-            jwk-set-uri: http://gateway-service:8084/auth-server/oauth2/jwks
+            jwk-set-uri: http://gateway-service/auth-server/oauth2/jwks
 signup:
   external:
     uri:
-      auth-server-create: http://auth-service:8082/api/v1/authorization/create
-      auth-server-delete: http://auth-service:8082/api/v1/authorization/delete
-      user-service-create: http://user-service:8080/api/v1/users/create
+      auth-server-create: http://auth-service/api/v1/authorization/create
+      auth-server-delete: http://auth-service/api/v1/authorization/delete
+      user-service-create: http://user-service/api/v1/users/create
     param:
       auth-server-delete: code
     backoff-delay: 2
@@ -77,15 +77,50 @@ springdoc:
     oauth:
       client-id: gateway-client
       use-pkce-with-authorization-code-grant: false
-    oauth2-redirect-url: http://gateway-service:8084/swagger-ui/oauth2-redirect.html
+    oauth2-redirect-url: http://gateway-service/swagger-ui/oauth2-redirect.html
   oAuthFlow:
-    authorizationUrl: http://auth-service:8082/oauth2/authorize
-    tokenUrl: http://auth-service:8082/oauth2/token
+    authorizationUrl: http://auth-service/oauth2/authorize
+    tokenUrl: http://auth-service/oauth2/token
     scopes: openid
-swagger-server: http://gateway-service:8084/
+swagger-server: http://gateway-service/
 logging:
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
   level:
     org:
       springframework:
         security: TRACE
         cloud.gateway.handler.RoutePredicateHandlerMapping: TRACE
+
+
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://tempo.monitoring.svc.cluster.local:4318/v1/traces
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show:
+        details: "always"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+otel:
+  traces:
+    sampler: always_on
+  exporter:
+    otlp:
+      protocol: grpc
+      endpoint: http://otel-collector.monitoring.svc.cluster.local:4317
