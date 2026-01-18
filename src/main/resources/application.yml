@@ -98,7 +98,7 @@ management:
     tracing:
       export:
         otlp:
-          endpoint: http://tempo.monitoring.svc.cluster.local:4318/v1/traces
+          endpoint: http://otel-collector.monitoring.svc.cluster.local:4318
   endpoints:
     web:
       exposure:
