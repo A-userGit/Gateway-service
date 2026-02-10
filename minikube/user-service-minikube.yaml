@@ -16,6 +16,9 @@ spec:
         - name: user-service-container
           image: user-service:latest
           imagePullPolicy: Never
+          env:
+            - name: SPRING_PROFILE
+              value: prod
           ports:
             - containerPort: 80
           livenessProbe:
