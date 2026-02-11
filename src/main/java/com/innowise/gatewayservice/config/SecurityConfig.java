@@ -58,7 +58,7 @@ public class SecurityConfig {
     config.setAllowedOriginPatterns(
         Arrays.asList("http://localhost:8080*", "http://localhost:8082*", "null",
             "http://auth-service*", "http://gateway-service:8084*", "http://localhost:8084*","http://localhost:517*",
-                "http://simple-shop*",
+                "http://simple-shop*","http://localhost*",
             "http://user-service:8080*", "http://order-service:8083*", "http://localhost:8083*"));
     config.setAllowCredentials(true);
     source.registerCorsConfiguration("/**", config);
