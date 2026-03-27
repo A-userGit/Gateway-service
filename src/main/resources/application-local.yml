@@ -4,7 +4,7 @@ AUTH_SERVICE_ADDR: http://localhost:8082
 ORDER_SERVICE_ADDR: http://localhost:8083
 PAYMENT_SERVICE_ADDR: http://localhost:8084
 GATEWAY_HOST_PORT: localhost:8085
-AUTH_HOST_PORT: localhost:8082
+AUTH_HOST_PORT: http://localhost:8082
 CLIENT_ID: gateway-client
 CLIENT_SECRET: KLJIHUGJKKLIJHGHGGF
 USER_HOST_PORT: localhost:8080

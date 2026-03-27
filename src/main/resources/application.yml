@@ -54,9 +54,9 @@ spring:
             scope: openid
         provider:
           my-oidc-provider:
-            issuer-uri: http://${AUTH_HOST_PORT}
-            authorization-uri: http://${AUTH_HOST_PORT}/oauth2/authorize
-            token-uri: http://${AUTH_HOST_PORT}/oauth2/token
+            issuer-uri: ${AUTH_HOST_PORT}
+            authorization-uri: ${AUTH_HOST_PORT}/oauth2/authorize
+            token-uri: ${AUTH_HOST_PORT}/oauth2/token
             redirect-uri: http://${GATEWAY_HOST_PORT}/login/oauth2/code/my-oidc-client
             user-info-uri: http://${GATEWAY_HOST_PORT}/auth-server/oauth2/userinfo
             user-name-attribute: sub
@@ -64,8 +64,8 @@ spring:
 signup:
   external:
     uri:
-      auth-server-create: http://${AUTH_HOST_PORT}/api/v1/authorization/create
-      auth-server-delete: http://${AUTH_HOST_PORT}/api/v1/authorization/delete
+      auth-server-create: ${AUTH_HOST_PORT}/api/v1/authorization/create
+      auth-server-delete: ${AUTH_HOST_PORT}/api/v1/authorization/delete
       user-service-create: http://${USER_HOST_PORT}/api/v1/users/create
     param:
       auth-server-delete: code
@@ -81,8 +81,8 @@ springdoc:
       use-pkce-with-authorization-code-grant: false
     oauth2-redirect-url: http://${GATEWAY_HOST_PORT}/swagger-ui/oauth2-redirect.html
   oAuthFlow:
-    authorizationUrl: http://${AUTH_HOST_PORT}/oauth2/authorize
-    tokenUrl: http://${AUTH_HOST_PORT}/oauth2/token
+    authorizationUrl: ${AUTH_HOST_PORT}/oauth2/authorize
+    tokenUrl: ${AUTH_HOST_PORT}/oauth2/token
     scopes: openid
 swagger-server: http://${GATEWAY_HOST_PORT}/
 logging:
