@@ -16,8 +16,17 @@ spec:
         - name: order-service-container
           image: order-service:latest
           imagePullPolicy: Never
+          env:
+            - name: SPRING_PROFILE
+              value: prod
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service

@@ -41,8 +41,8 @@ config:
       endpoint: "http://loki-gateway.monitoring.svc.cluster.local/otlp"
       tls:
         insecure: true
-    otlp/tempo:
-      endpoint: "http://tempo.monitoring.svc.cluster.local:4317"
+    otlphttp/tempo:
+      endpoint: "http://tempo.monitoring.svc.cluster.local:4318"
       tls:
         insecure: true
     debug:
@@ -61,4 +61,4 @@ config:
       traces:
         receivers: [otlp]
         processors: [k8sattributes, batch, resourcedetection/internal ]
-        exporters: [otlp/tempo, debug]
+        exporters: [otlphttp/tempo, debug]

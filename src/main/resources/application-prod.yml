@@ -1,0 +1,8 @@
+PORT: 80
+USER_SERVICE_ADDR: http://user-service
+AUTH_SERVICE_ADDR: https://auth-service
+ORDER_SERVICE_ADDR: http://order-service
+PAYMENT_SERVICE_ADDR: http://payment-service
+GATEWAY_HOST_PORT: gateway-service
+AUTH_HOST_PORT: https://auth-service
+USER_HOST_PORT: user-service

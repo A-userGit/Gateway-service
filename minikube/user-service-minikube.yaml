@@ -12,12 +12,46 @@ spec:
       labels:
         app: user-service
     spec:
+      volumes:
+        - name: new-cacerts
+          emptyDir: { }
+        - name: ca-cert-volume
+          configMap:
+            name: my-ca-pemstore
+      initContainers:
+        - name: add-custom-ca
+          image: eclipse-temurin:21-jdk
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              cp $JAVA_HOME/lib/security/cacerts /opt/new-cacerts/cacerts
+              chmod +w /opt/new-cacerts/cacerts
+              keytool -importcert -no-prompt -keystore /opt/new-cacerts/cacerts -storepass changeit -file /etc/ssl/certs/simple-shop.pem -alias simple-shop
+          volumeMounts:
+            - name: new-cacerts
+              mountPath: /opt/new-cacerts
+            - name: ca-cert-volume
+              mountPath: /etc/ssl/certs/simple-shop.pem
+              subPath: simple-shop.pem
       containers:
         - name: user-service-container
           image: user-service:latest
+          volumeMounts:
+            - name: new-cacerts
+              mountPath: /opt/java/openjdk/lib/security/cacerts
+              subPath: cacerts
           imagePullPolicy: Never
+          env:
+            - name: SPRING_PROFILE
+              value: prod
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service

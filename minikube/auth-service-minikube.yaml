@@ -1,33 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: auth-service
+  name: auth-service-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: auth-service
+      app: auth-service-deployment
   template:
     metadata:
       labels:
-        app: auth-service
+        app: auth-service-deployment
     spec:
       containers:
         - name: auth-service-container
           image: auth-service:latest
           imagePullPolicy: Never
+          env:
+            - name: SPRING_PROFILE
+              value: prod
           ports:
-            - containerPort: 80
+            - containerPort: 8443
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8443
+            initialDelaySeconds: 5
+            periodSeconds: 60
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: auth-service
+  name: auth-idp-service
 spec:
   selector:
-    app: auth-service
+    app: auth-service-deployment
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 443
+      targetPort: 8443
   type: ClusterIP
